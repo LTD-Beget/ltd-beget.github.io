@@ -82,7 +82,7 @@
   
     <div class="post">
         <h1 class="post-title"><a href="https://polachok.github.io/2016/10/09/syn-flood-mitigation-with-syncookied/">SYN flood mitigation with syncookied</a></h1>
-        <span class="post-date">Oct 9 9106</span>
+        <span class="post-date">Oct 9 2016</span>
         
 
 <p>Here at <a href="https://beget.com">Beget</a>, we operate hundreds of servers hosting thousands of websites for our customers. Like any large hosting provider we have to deal with DDOS attacks on our network. Due to the nature of shared hosting, an attack directed against one site can affect other sites on the same server.</p>
@@ -101,23 +101,28 @@
 
 <h3 id="syn-cookies">SYN cookies</h3>
 
-<p>This technique was invented by Daniel J.Berstein in 1996. The crux of the idea is to encode incoming tcp connection parameters into the sequence number sent back to the client (in a <code>SYN+ACK</code> packet). A conforming client will then increment this number and send it back to us, effectively freeing the server from the burden of saving state. Upon receiving a final <code>ACK</code> from the client server validates that the cookie was indeed generated on the server.</p>
+<p>This technique was invented by Daniel J.Berstein in 1996. The crux of the idea is to encode incoming TCP connection parameters into the sequence number sent back to the client (in a <code>SYN+ACK</code> packet). A conforming client will then increment this number and send it back to us, effectively freeing the server from the burden of saving state. Upon receiving a final <code>ACK</code> from the client server validates that the cookie was indeed generated on the server.</p>
 
-<p>The cookie is created by hashing source and destination IP addresses and ports and adding initial client&rsquo;s sequence number to the result. A unique secret key is used to ensure that cookie is not forged.</p>
+<p>The cookie is created by hashing source and destination IP addresses and ports and adding initial client&rsquo;s sequence number to the result. Client MTU is also encoded in the cookie. A unique secret key is used to ensure that cookie is not forged.</p>
 
 <p>As an additional features, Linux uses lowest bits of the TCP timestamp option to encode ECN, S-ACK and WSCALE options.</p>
 
-<p>SYN cookie significantly improves system&rsquo;s ability to process SYN packets. In our tests a system without any specific tuning was able to withstand 300K-350K packets per second (data is valid for a 1G network card with 4 interrupt lines).</p>
+<p>SYN cookies significantly improves system&rsquo;s ability to process SYN packets. In our tests a system without any specific tuning was able to withstand 300K-350K packets per second (data is valid for a 1G network card with 4 interrupt lines).</p>
 
-<p>[ Talk about disadvantages ]</p>
+<p>There&rsquo;re some disadvantages to using SYN cookies:</p>
+
+<ul>
+<li>SYN cookies use SHA1 hash function which is relatively expensive to compute</li>
+<li>TCP sequence number is only 32bit which leads to limited choice of MTU values</li>
+</ul>
 
 <h3 id="synproxy">SYNPROXY</h3>
 
-<p>SYN proxy iptables target was added in Linux 3.12. It is similar to syn cookies technique, but has some additional advantages and disadvantages. <code>synproxy</code> target processes packets before they hit Linux TCP stack and can be used for proxying valid packets to another server. Upon receiving SYN packet, SYNPROXY sends a cookie in response, and if it finds the response valid, it generates new SYN packet for the proxied host and rewrites sequence numbers in both directions.</p>
+<p>SYNPROXY iptables target was added in Linux 3.12. It is similar to syn cookies, but has some additional advantages and disadvantages. SYNPROXY target processes packets before they hit Linux TCP stack and can be used for proxying valid packets to another server. Upon receiving SYN packet, SYNPROXY sends a cookie in response, and if it finds the response valid, it generates new SYN packet for the proxied host and rewrites sequence numbers in both directions.</p>
 
 <p><img src="https://polachok.github.io/img/synproxy.png" alt="synproxy" /></p>
 
-<p>In fact, this is how most of commercial SYN flood attack protection solutions work.</p>
+<p>In fact, this is how most of commercial SYN flood attack protection solutions operate.</p>
 
 <p>This method has some undeniable advantages:</p>
 
@@ -158,7 +163,7 @@
 <ul>
 <li><strong>syncookied firewall</strong> is a binary running on the firewall machine. Its task is to filter packets according to the rules in the configuration file. Syncookied firewall communicates with the syncookied server over local network and retrieves the secret keys.</li>
 <li><strong>syncookied server</strong> is a binary running on the protected machine. Its task is to transfer the secret key, used for SYN cookie generation, to the firewall.</li>
-<li><strong>tcpsecrets kernel module</strong> is a kernel module which exposes tcp secret key and the timestamp as a file in /proc filesystem to be read by syncookied server. It also installs an Ftrace handler to fool the kernel into thinking that SYN cookie was sent.</li>
+<li><strong>tcpsecrets kernel module</strong> is a kernel module which exposes TCP secret key and the timestamp as a file in /proc filesystem to be read by syncookied server. It also installs an Ftrace handler to fool the kernel into thinking that SYN cookie was sent.</li>
 </ul>
 
 <p><img src="https://polachok.github.io/img/syncookied.png" alt="syncookied" /></p>
@@ -168,13 +173,13 @@ In case of an attack the ARP entry for the protected IP is overriden on the swit
 
 <p>Syncookied firewall holds an in-memory table matching protected IP addresses with the secret keys and mac addresses, which is updated at 10 second interval. Upon receiving a SYN packet it consults the table, finds the appopriate key and timestamp, and generates a cookie, using the same alghorithm Linux kernel uses. ACK packets are then validated against the same key, and if found legit, are forwarded to protected server&rsquo;s MAC. Protected server accepts the packet, because it was generated with its key.</p>
 
-<p>In our tests we found that this system can handle up to 12Mpps SYN flood attack with 12 cores of Xeon E5-2680v3. How is this possible?</p>
+<p>In our tests we found that this system can handle up to 12Mpps SYN flood attack with 12 cores of Xeon E5-2680v3. What makes it possible?</p>
 
 <h3 id="netmap-and-rust">Netmap and Rust</h3>
 
-<p>We evaluated multiple kernel bypass technologies for syncookied and decided to use netmap for its stability and simple API. Netmap provides userland access to network card packet buffers (called rings), excluding kernel from the data path.</p>
+<p>We evaluated multiple kernel bypass technologies for syncookied and decided to use netmap for its stability and simple API. Netmap uses custom network card drivers to provide userland access to network card packet buffers (called rings), excluding kernel TCP stack from the data path. Netmap userland API is based on well-known system calls <code>poll()</code> and <code>mmap()</code>.</p>
 
-<p>Rust was choosen for its safety features and zero-cost abstractions. We haven&rsquo;t seen a single segmentation fault or a memory leak yet. Netmap bindings are provided by <a href="https://crates.io/crates/netmap_sys">netmap-sys</a> crate, while packet parsing is handled by awesome <a href="https://crates.io/crates/pnet">libpnet</a> library. We use a thread for each RX and TX ring and use a queue to communicate between threads.</p>
+<p>Rust was choosen for its safety features and zero-cost abstractions. We haven&rsquo;t seen a single segmentation fault or a memory leak yet. Netmap bindings are provided by <a href="https://crates.io/crates/netmap_sys">netmap-sys</a> crate, while packet parsing is handled by awesome <a href="https://crates.io/crates/pnet">libpnet</a> library.</p>
 
 <p>We&rsquo;d like to thank open source community for their work and give back by putting our solution on Github. It&rsquo;s still at 0.2.x version, but we believe in &ldquo;release early, release often&rdquo; philosophy and hope that it will find its users and we will find new contributors.</p>
 
