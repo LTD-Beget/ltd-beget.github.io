@@ -69,18 +69,18 @@ That's how we came to the idea of developing our own solution which will fit our
 
 Syncookied system is a further development of SYN cookies, in a distributed fashion. It consists of 3 parts:
 
- - **syncookied firewall** is a binary running on the firewall machine. Its task is to filter packets according to the rules in the configuration file. syncookied firewall communicates with syncookied server over local network and retrieves secret keys.
+ - **syncookied firewall** is a binary running on the firewall machine. Its task is to filter packets according to the rules in the configuration file. Syncookied firewall communicates with the syncookied server over local network and retrieves the secret keys.
  - **syncookied server** is a binary running on the protected machine. Its task is to transfer the secret key, used for SYN cookie generation, to the firewall.
- - **tcpsecrets kernel module** is a kernel module which exposes tcp secret key and timestamp as a file in /proc filesystem to be read by syncookied server. It also installs an Ftrace handler to fool the kernel into thinking that SYN cookie was sent.
+ - **tcpsecrets kernel module** is a kernel module which exposes tcp secret key and the timestamp as a file in /proc filesystem to be read by syncookied server. It also installs an Ftrace handler to fool the kernel into thinking that SYN cookie was sent.
 
 ![syncookied](/img/syncookied.png)
 
-When not under attack, traffic between the router and the server flows directly.
+When not under attack, the traffic between the router and the server flows directly.
 In case of an attack the ARP entry for the protected IP is overriden on the switch with the MAC address of the firewall, directing the traffic flow to it.
 
-Syncookied firewall holds an in memory table matching protected IP addresses with secret keys and mac addresses, which is updated at 10 second interval. Upon receiving a SYN packet it consults the table, finds appopriate key and timestamp, and generates a cookie using the same alghorithm Linux kernel uses. ACK packets are then validated against the same key, and if found legit are forwarded to protected server's MAC. Protected server accepts the packet because it was generated with its key.
+Syncookied firewall holds an in-memory table matching protected IP addresses with the secret keys and mac addresses, which is updated at 10 second interval. Upon receiving a SYN packet it consults the table, finds the appopriate key and timestamp, and generates a cookie, using the same alghorithm Linux kernel uses. ACK packets are then validated against the same key, and if found legit, are forwarded to protected server's MAC. Protected server accepts the packet, because it was generated with its key.
 
-In our tests we found that this system can handle 12Mpps SYN flood attack with 12 cores of Xeon E5-2680v3. How is this possible?
+In our tests we found that this system can handle up to 12Mpps SYN flood attack with 12 cores of Xeon E5-2680v3. How is this possible?
 
 ### Netmap and Rust
 
