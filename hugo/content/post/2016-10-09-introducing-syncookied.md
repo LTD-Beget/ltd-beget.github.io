@@ -81,7 +81,7 @@ Syncookied system is a further development of SYN cookies, in a distributed fash
 When not under attack, the traffic between the router and the server flows directly.
 In case of an attack the ARP entry for the protected IP is overriden on the switch with the MAC address of the firewall, directing the traffic flow to it.
 
-Syncookied firewall holds an in-memory table matching protected IP addresses with the secret keys and mac addresses, which is updated at 10 second interval. Upon receiving a SYN packet it consults the table, finds the appopriate key and timestamp, and generates a cookie, using the same alghorithm Linux kernel uses. ACK packets are then validated against the same key, and if found legit, are forwarded to protected server's MAC. Protected server accepts the packet, because it was generated with its key.
+Syncookied firewall holds an in-memory table matching protected IP addresses with the secret keys and mac addresses, which is updated at 10 second interval. Upon receiving a SYN packet it consults the table, finds the appopriate key and timestamp, and generates a cookie, using the same alghorithm Linux kernel uses. ACK packets are then validated against the same key, and if found legit, are forwarded to protected server's MAC. Protected server accepts the packet, because it was generated with its key, and sends reply directly to the router.
 
 In our tests we found that this system can handle up to 12Mpps SYN flood attack with 12 cores of Xeon E5-2680v3. What makes it possible?
 
