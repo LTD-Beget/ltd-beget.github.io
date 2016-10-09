@@ -85,13 +85,13 @@
 
 <h3 id="tcp-connection-establishment">TCP connection establishment</h3>
 
-<p>TCP connections is established by so-called &ldquo;three-way handshake&rdquo;. When TCP server starts it passively waits for a connection by executing <code>listen()</code> and <code>accept()</code> system calls. The client on the other side sends a <code>SYN</code> packet with an arbitrary sequence number, starting connection parameter negotiation. The server saves client&rsquo;s parameters and sequence number and responds with a <code>SYN+ACK</code> packet with its own preferred parameters, sequence number and client&rsquo;s sequence number incremented by one. The client sends <code>ACK</code> packet back and connection is now established.</p>
+<p>TCP connections is established by so-called &ldquo;three-way handshake&rdquo;. When TCP server starts, it passively waits for a connection by executing <code>listen()</code> and <code>accept()</code> system calls. The client on the other side sends a <code>SYN</code> packet with an arbitrary sequence number, starting connection parameter negotiation. The server saves client&rsquo;s parameters and sequence number and responds with a <code>SYN+ACK</code> packet with its own preferred parameters, sequence number and client&rsquo;s sequence number incremented by one. The client sends <code>ACK</code> packet back and connection is now established.</p>
 
-<p><img src="https://polachok.github.io/img/3-way-handshake.png" alt="alt text" /></p>
+<p><img src="https://polachok.github.io/img/3-way-handshake.png" alt="3 way handshake" /></p>
 
 <p>During SYN flood attack the server is flooded with millions of SYN packets per second. In older releases kernel created a new socket for each received SYN packet. It was a huge waste of resources. More recent kernels employ &ldquo;mini-sockets&rdquo; technique to reduce the impact of SYN attacks, this work was done by an awesome Google engineer Eric Dumazet and is available in mainline kernels since 4.5.</p>
 
-<p>Mini-sockets or not, it&rsquo;s clearly undesirable to store any state before the connection is fully established, and this is how we come to the idea of SYN cookies.</p>
+<p>Using mini-sockets or not, it&rsquo;s clearly undesirable to store any state before the connection is fully established, and this is how we come to the idea of SYN cookies.</p>
 
 <h3 id="syn-cookies">SYN cookies</h3>
 
@@ -109,6 +109,8 @@
 
 <p>SYN proxy iptables target was added in Linux 3.12. It is similar to syn cookies technique, but has some additional advantages and disadvantages. <code>synproxy</code> target processes packets before they hit Linux TCP stack and can be used for proxying valid packets to another server. Upon receiving SYN packet, SYNPROXY sends a cookie in response, and if it finds the response valid, it generates new SYN packet for the proxied host and rewrites sequence numbers in both directions.</p>
 
+<p><img src="https://polachok.github.io/img/synproxy.png" alt="synproxy" /></p>
+
 <p>In fact, this is how most of commercial SYN flood attack protection solutions work.</p>
 
 <p>This method has some undeniable advantages:</p>
@@ -123,17 +125,35 @@
 
 <ul>
 <li>disadvantages of SYN cookie</li>
-<li>termination of all established connections when activating protection</li>
-<li>equipment has to be installed in the split, meaning that all traffic to the server and from it has to pass through SYNPROXY</li>
+<li>firewall has to rewrite sequence numbers which leads to termination of all established connections when activating protection</li>
+<li>equipment has to be installed in the split, meaning that all traffic to the server and from it has to pass through the proxy</li>
 </ul>
 
 <p>We have been using iptables SYNPROXY for some time and found that this solution was suboptimal for our requirements. The power of DDOS attacks available for a dollar is increasing every day, and we&rsquo;re about to hit the limit of what&rsquo;s possible to do with SYNPROXY.</p>
 
 <p>Then we turned to commercial vendors and quickly found out that their solutions are too costly ($100 000 for a piece of hardware).</p>
 
-<p>That&rsquo;s how we came to the idea of developing our own solution which will fit our usecase (managed servers).</p>
+<p>That&rsquo;s how we came to the idea of developing our own solution which will fit our requirements.</p>
 
-<h3 id="our-solution">Our solution</h3>
+<h3 id="our-requirements">Our requirements</h3>
+
+<ul>
+<li>We connect our servers with 1G links, which provide suffient bandwidth in normal operation. In case of an attack they quickly get flooded, which means we can&rsquo;t just use syncookies on the end server</li>
+<li>We can&rsquo;t use iptables SYNPROXY for permonance reasons</li>
+<li>We can&rsquo;t use commercial solutions because they cost too much</li>
+<li>We want to be able to turn protection on and off without disturbing established connections</li>
+<li>We want to use commodity hardware</li>
+</ul>
+
+<p>Syncookied system is a further development of SYN cookies, in a distributed fashion. It consists of 3 parts:</p>
+
+<ul>
+<li><strong>syncookied firewall</strong> is a binary running on the firewall machine. Its task is to filter packets according to the rules in the configuration file. syncookied firewall communicates with syncookied server over local network and retrieves secret keys.</li>
+<li><strong>syncookied server</strong> is a binary running on the protected machine. Its task is to transfer the secret key, used for SYN cookie generation, to the firewall.</li>
+<li><strong>tcpsecrets kernel module</strong> is a kernel module which exposes tcp secret key and timestamp as a file in /proc filesystem to be read by syncookied server. It also installs an Ftrace handler to fool the kernel into thinking that SYN cookie was sent.</li>
+</ul>
+
+<p><img src="https://polachok.github.io/img/syncookied.png" alt="syncookied" /></p>
 
 </div>
 

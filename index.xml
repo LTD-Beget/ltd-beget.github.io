@@ -24,13 +24,13 @@
 
 &lt;h3 id=&#34;tcp-connection-establishment&#34;&gt;TCP connection establishment&lt;/h3&gt;
 
-&lt;p&gt;TCP connections is established by so-called &amp;ldquo;three-way handshake&amp;rdquo;. When TCP server starts it passively waits for a connection by executing &lt;code&gt;listen()&lt;/code&gt; and &lt;code&gt;accept()&lt;/code&gt; system calls. The client on the other side sends a &lt;code&gt;SYN&lt;/code&gt; packet with an arbitrary sequence number, starting connection parameter negotiation. The server saves client&amp;rsquo;s parameters and sequence number and responds with a &lt;code&gt;SYN+ACK&lt;/code&gt; packet with its own preferred parameters, sequence number and client&amp;rsquo;s sequence number incremented by one. The client sends &lt;code&gt;ACK&lt;/code&gt; packet back and connection is now established.&lt;/p&gt;
+&lt;p&gt;TCP connections is established by so-called &amp;ldquo;three-way handshake&amp;rdquo;. When TCP server starts, it passively waits for a connection by executing &lt;code&gt;listen()&lt;/code&gt; and &lt;code&gt;accept()&lt;/code&gt; system calls. The client on the other side sends a &lt;code&gt;SYN&lt;/code&gt; packet with an arbitrary sequence number, starting connection parameter negotiation. The server saves client&amp;rsquo;s parameters and sequence number and responds with a &lt;code&gt;SYN+ACK&lt;/code&gt; packet with its own preferred parameters, sequence number and client&amp;rsquo;s sequence number incremented by one. The client sends &lt;code&gt;ACK&lt;/code&gt; packet back and connection is now established.&lt;/p&gt;
 
-&lt;p&gt;&lt;img src=&#34;https://polachok.github.io/img/3-way-handshake.png&#34; alt=&#34;alt text&#34; /&gt;&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;https://polachok.github.io/img/3-way-handshake.png&#34; alt=&#34;3 way handshake&#34; /&gt;&lt;/p&gt;
 
 &lt;p&gt;During SYN flood attack the server is flooded with millions of SYN packets per second. In older releases kernel created a new socket for each received SYN packet. It was a huge waste of resources. More recent kernels employ &amp;ldquo;mini-sockets&amp;rdquo; technique to reduce the impact of SYN attacks, this work was done by an awesome Google engineer Eric Dumazet and is available in mainline kernels since 4.5.&lt;/p&gt;
 
-&lt;p&gt;Mini-sockets or not, it&amp;rsquo;s clearly undesirable to store any state before the connection is fully established, and this is how we come to the idea of SYN cookies.&lt;/p&gt;
+&lt;p&gt;Using mini-sockets or not, it&amp;rsquo;s clearly undesirable to store any state before the connection is fully established, and this is how we come to the idea of SYN cookies.&lt;/p&gt;
 
 &lt;h3 id=&#34;syn-cookies&#34;&gt;SYN cookies&lt;/h3&gt;
 
@@ -48,6 +48,8 @@
 
 &lt;p&gt;SYN proxy iptables target was added in Linux 3.12. It is similar to syn cookies technique, but has some additional advantages and disadvantages. &lt;code&gt;synproxy&lt;/code&gt; target processes packets before they hit Linux TCP stack and can be used for proxying valid packets to another server. Upon receiving SYN packet, SYNPROXY sends a cookie in response, and if it finds the response valid, it generates new SYN packet for the proxied host and rewrites sequence numbers in both directions.&lt;/p&gt;
 
+&lt;p&gt;&lt;img src=&#34;https://polachok.github.io/img/synproxy.png&#34; alt=&#34;synproxy&#34; /&gt;&lt;/p&gt;
+
 &lt;p&gt;In fact, this is how most of commercial SYN flood attack protection solutions work.&lt;/p&gt;
 
 &lt;p&gt;This method has some undeniable advantages:&lt;/p&gt;
@@ -62,17 +64,35 @@
 
 &lt;ul&gt;
 &lt;li&gt;disadvantages of SYN cookie&lt;/li&gt;
-&lt;li&gt;termination of all established connections when activating protection&lt;/li&gt;
-&lt;li&gt;equipment has to be installed in the split, meaning that all traffic to the server and from it has to pass through SYNPROXY&lt;/li&gt;
+&lt;li&gt;firewall has to rewrite sequence numbers which leads to termination of all established connections when activating protection&lt;/li&gt;
+&lt;li&gt;equipment has to be installed in the split, meaning that all traffic to the server and from it has to pass through the proxy&lt;/li&gt;
 &lt;/ul&gt;
 
 &lt;p&gt;We have been using iptables SYNPROXY for some time and found that this solution was suboptimal for our requirements. The power of DDOS attacks available for a dollar is increasing every day, and we&amp;rsquo;re about to hit the limit of what&amp;rsquo;s possible to do with SYNPROXY.&lt;/p&gt;
 
 &lt;p&gt;Then we turned to commercial vendors and quickly found out that their solutions are too costly ($100 000 for a piece of hardware).&lt;/p&gt;
 
-&lt;p&gt;That&amp;rsquo;s how we came to the idea of developing our own solution which will fit our usecase (managed servers).&lt;/p&gt;
+&lt;p&gt;That&amp;rsquo;s how we came to the idea of developing our own solution which will fit our requirements.&lt;/p&gt;
 
-&lt;h3 id=&#34;our-solution&#34;&gt;Our solution&lt;/h3&gt;
+&lt;h3 id=&#34;our-requirements&#34;&gt;Our requirements&lt;/h3&gt;
+
+&lt;ul&gt;
+&lt;li&gt;We connect our servers with 1G links, which provide suffient bandwidth in normal operation. In case of an attack they quickly get flooded, which means we can&amp;rsquo;t just use syncookies on the end server&lt;/li&gt;
+&lt;li&gt;We can&amp;rsquo;t use iptables SYNPROXY for permonance reasons&lt;/li&gt;
+&lt;li&gt;We can&amp;rsquo;t use commercial solutions because they cost too much&lt;/li&gt;
+&lt;li&gt;We want to be able to turn protection on and off without disturbing established connections&lt;/li&gt;
+&lt;li&gt;We want to use commodity hardware&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;Syncookied system is a further development of SYN cookies, in a distributed fashion. It consists of 3 parts:&lt;/p&gt;
+
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;syncookied firewall&lt;/strong&gt; is a binary running on the firewall machine. Its task is to filter packets according to the rules in the configuration file. syncookied firewall communicates with syncookied server over local network and retrieves secret keys.&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;syncookied server&lt;/strong&gt; is a binary running on the protected machine. Its task is to transfer the secret key, used for SYN cookie generation, to the firewall.&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;tcpsecrets kernel module&lt;/strong&gt; is a kernel module which exposes tcp secret key and timestamp as a file in /proc filesystem to be read by syncookied server. It also installs an Ftrace handler to fool the kernel into thinking that SYN cookie was sent.&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;&lt;img src=&#34;https://polachok.github.io/img/syncookied.png&#34; alt=&#34;syncookied&#34; /&gt;&lt;/p&gt;
 </description>
         </item>
       
