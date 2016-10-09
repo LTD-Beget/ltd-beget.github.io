@@ -5,7 +5,7 @@
 
     "builddrafts": false,
 
-    "baseurl": "https://polachok.github.io/",
+    "baseurl": "https://ltd-beget.github.io/",
     "canonifyurls": true,
     "permalinks": {
         "post": ":year/:month/:day/:title/",
@@ -15,12 +15,12 @@
     "pygmentsuseclasses": true,
 
     "params": {
-        "Title": "pl/hk",
-        "Tagline": "dev blog",
+        "Title": "Beget engineering blog",
+        "Tagline": "",
         "Author": "Alexander Polakov",
         "DateForm": "Jan 2 2006",
         "Github": {
-            "Url": "http://github.com/polachok/polachok.github.io",
+            "Url": "http://github.com/LTD-Beget/ltd-beget.github.io",
             "Head": "master"
         }
     }
