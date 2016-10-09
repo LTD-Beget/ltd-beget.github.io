@@ -21,23 +21,26 @@ Using mini-sockets or not, it's clearly undesirable to store any state before th
 
 ### SYN cookies
 
-This technique was invented by Daniel J.Berstein in 1996. The crux of the idea is to encode incoming tcp connection parameters into the sequence number sent back to the client (in a `SYN+ACK` packet). A conforming client will then increment this number and send it back to us, effectively freeing the server from the burden of saving state. Upon receiving a final `ACK` from the client server validates that the cookie was indeed generated on the server.
+This technique was invented by Daniel J.Berstein in 1996. The crux of the idea is to encode incoming TCP connection parameters into the sequence number sent back to the client (in a `SYN+ACK` packet). A conforming client will then increment this number and send it back to us, effectively freeing the server from the burden of saving state. Upon receiving a final `ACK` from the client server validates that the cookie was indeed generated on the server.
 
-The cookie is created by hashing source and destination IP addresses and ports and adding initial client's sequence number to the result. A unique secret key is used to ensure that cookie is not forged.
+The cookie is created by hashing source and destination IP addresses and ports and adding initial client's sequence number to the result. Client MTU is also encoded in the cookie. A unique secret key is used to ensure that cookie is not forged.
 
 As an additional features, Linux uses lowest bits of the TCP timestamp option to encode ECN, S-ACK and WSCALE options.
 
-SYN cookie significantly improves system's ability to process SYN packets. In our tests a system without any specific tuning was able to withstand 300K-350K packets per second (data is valid for a 1G network card with 4 interrupt lines). 
+SYN cookies significantly improves system's ability to process SYN packets. In our tests a system without any specific tuning was able to withstand 300K-350K packets per second (data is valid for a 1G network card with 4 interrupt lines). 
 
-[ Talk about disadvantages ]
+There're some disadvantages to using SYN cookies:
+
+ - SYN cookies use SHA1 hash function which is relatively expensive to compute
+ - TCP sequence number is only 32bit which leads to limited choice of MTU values
 
 ### SYNPROXY
 
-SYN proxy iptables target was added in Linux 3.12. It is similar to syn cookies technique, but has some additional advantages and disadvantages. `synproxy` target processes packets before they hit Linux TCP stack and can be used for proxying valid packets to another server. Upon receiving SYN packet, SYNPROXY sends a cookie in response, and if it finds the response valid, it generates new SYN packet for the proxied host and rewrites sequence numbers in both directions.
+SYNPROXY iptables target was added in Linux 3.12. It is similar to syn cookies, but has some additional advantages and disadvantages. SYNPROXY target processes packets before they hit Linux TCP stack and can be used for proxying valid packets to another server. Upon receiving SYN packet, SYNPROXY sends a cookie in response, and if it finds the response valid, it generates new SYN packet for the proxied host and rewrites sequence numbers in both directions.
 
 ![synproxy](/img/synproxy.png)
 
-In fact, this is how most of commercial SYN flood attack protection solutions work.
+In fact, this is how most of commercial SYN flood attack protection solutions operate.
 
 This method has some undeniable advantages:
 
@@ -71,7 +74,7 @@ Syncookied system is a further development of SYN cookies, in a distributed fash
 
  - **syncookied firewall** is a binary running on the firewall machine. Its task is to filter packets according to the rules in the configuration file. Syncookied firewall communicates with the syncookied server over local network and retrieves the secret keys.
  - **syncookied server** is a binary running on the protected machine. Its task is to transfer the secret key, used for SYN cookie generation, to the firewall.
- - **tcpsecrets kernel module** is a kernel module which exposes tcp secret key and the timestamp as a file in /proc filesystem to be read by syncookied server. It also installs an Ftrace handler to fool the kernel into thinking that SYN cookie was sent.
+ - **tcpsecrets kernel module** is a kernel module which exposes TCP secret key and the timestamp as a file in /proc filesystem to be read by syncookied server. It also installs an Ftrace handler to fool the kernel into thinking that SYN cookie was sent.
 
 ![syncookied](/img/syncookied.png)
 
@@ -80,13 +83,13 @@ In case of an attack the ARP entry for the protected IP is overriden on the swit
 
 Syncookied firewall holds an in-memory table matching protected IP addresses with the secret keys and mac addresses, which is updated at 10 second interval. Upon receiving a SYN packet it consults the table, finds the appopriate key and timestamp, and generates a cookie, using the same alghorithm Linux kernel uses. ACK packets are then validated against the same key, and if found legit, are forwarded to protected server's MAC. Protected server accepts the packet, because it was generated with its key.
 
-In our tests we found that this system can handle up to 12Mpps SYN flood attack with 12 cores of Xeon E5-2680v3. How is this possible?
+In our tests we found that this system can handle up to 12Mpps SYN flood attack with 12 cores of Xeon E5-2680v3. What makes it possible?
 
 ### Netmap and Rust
 
-We evaluated multiple kernel bypass technologies for syncookied and decided to use netmap for its stability and simple API. Netmap provides userland access to network card packet buffers (called rings), excluding kernel from the data path.
+We evaluated multiple kernel bypass technologies for syncookied and decided to use netmap for its stability and simple API. Netmap uses custom network card drivers to provide userland access to network card packet buffers (called rings), excluding kernel TCP stack from the data path. Netmap userland API is based on well-known system calls `poll()` and `mmap()`.
 
-Rust was choosen for its safety features and zero-cost abstractions. We haven't seen a single segmentation fault or a memory leak yet. Netmap bindings are provided by [netmap-sys](https://crates.io/crates/netmap_sys) crate, while packet parsing is handled by awesome [libpnet](https://crates.io/crates/pnet) library. We use a thread for each RX and TX ring and use a queue to communicate between threads.
+Rust was choosen for its safety features and zero-cost abstractions. We haven't seen a single segmentation fault or a memory leak yet. Netmap bindings are provided by [netmap-sys](https://crates.io/crates/netmap_sys) crate, while packet parsing is handled by awesome [libpnet](https://crates.io/crates/pnet) library.
 
 We'd like to thank open source community for their work and give back by putting our solution on Github. It's still at 0.2.x version, but we believe in "release early, release often" philosophy and hope that it will find its users and we will find new contributors.
 
