@@ -1,0 +1,27 @@
+{
+    "contentdir": "content",
+    "layoutdir": "layouts",
+    "publishdir": "public",
+
+    "builddrafts": false,
+
+    "baseurl": "https://polachok.github.io/",
+    "canonifyurls": true,
+    "permalinks": {
+        "post": ":year/:month/:day/:title/",
+        "fixed": ":title/"
+    },
+
+    "pygmentsuseclasses": true,
+
+    "params": {
+        "Title": "pl/hk",
+        "Tagline": "dev blog",
+        "Author": "Alexander Polakov",
+        "DateForm": "Oct 9 2016",
+        "Github": {
+            "Url": "http://github.com/polachok/polachok.github.io",
+            "Head": "master"
+        }
+    }
+}
