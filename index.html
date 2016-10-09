@@ -166,7 +166,17 @@
 <p>When not under attack, traffic between the router and the server flows directly.
 In case of an attack the ARP entry for the protected IP is overriden on the switch with the MAC address of the firewall, directing the traffic flow to it.</p>
 
-<p>Syncookied firewall holds an in memory table matching protected IP addresses with secret keys and mac addresses, which is updated at 10 second interval. Upon receiving a SYN packet it consults the table, finds appopriate key and timestamp, and generates a cookie using the same alghorithm Linux kernel uses. ACK packets are then validated against the same key, and if found legit are forwarded to protected server. Protected server accepts the packet because it was generated with its key.</p>
+<p>Syncookied firewall holds an in memory table matching protected IP addresses with secret keys and mac addresses, which is updated at 10 second interval. Upon receiving a SYN packet it consults the table, finds appopriate key and timestamp, and generates a cookie using the same alghorithm Linux kernel uses. ACK packets are then validated against the same key, and if found legit are forwarded to protected server&rsquo;s MAC. Protected server accepts the packet because it was generated with its key.</p>
+
+<p>In our tests we found that this system can handle 12Mpps SYN flood attack with 12 cores of Xeon E5-2680v3. How is this possible?</p>
+
+<h3 id="netmap-and-rust">Netmap and Rust</h3>
+
+<p>We evaluated multiple kernel bypass technologies for syncookied and decided to use netmap for its stability and simple API. Netmap provides userland access to network card packet buffers (called rings), excluding kernel from the data path.</p>
+
+<p>Rust was choosen for its safety features and zero-cost abstractions. We haven&rsquo;t seen a segmentation fault or a memory leak yet. Netmap bindings are provided by netmap-sys crate, while packet parsing is handled by awesome libpnet library.</p>
+
+<p>We&rsquo;d like to thank open source community for their work and give back by putting our solution on Github. It&rsquo;s still at 0.2.x version, but we believe in &ldquo;release early, release often&rdquo; philosophy and hope that it will find its users and we will find new contributors.</p>
 
     </div>
   
