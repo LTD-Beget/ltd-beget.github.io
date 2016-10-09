@@ -2,7 +2,7 @@
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
     <title> </title>
-    <link>https://polachok.github.io/index.xml</link>
+    <link>https://ltd-beget.github.io/index.xml</link>
     <language>en-us</language>
     <author>Alexander Polakov</author>
     <rights>(C) 2016</rights>
@@ -12,10 +12,10 @@
       
         <item>
           <title>SYN flood mitigation with syncookied</title>
-          <link>https://polachok.github.io/2016/10/09/syn-flood-mitigation-with-syncookied/</link>
+          <link>https://ltd-beget.github.io/2016/10/09/syn-flood-mitigation-with-syncookied/</link>
           <pubDate>Sun, 09 Oct 2016 00:00:00 UTC</pubDate>
           <author>Alexander Polakov</author>
-          <guid>https://polachok.github.io/2016/10/09/syn-flood-mitigation-with-syncookied/</guid>
+          <guid>https://ltd-beget.github.io/2016/10/09/syn-flood-mitigation-with-syncookied/</guid>
           <description>
 
 &lt;p&gt;Here at &lt;a href=&#34;https://beget.com&#34;&gt;Beget&lt;/a&gt;, we operate hundreds of servers hosting thousands of websites for our customers. Like any large hosting provider we have to deal with DDOS attacks on our network. Due to the nature of shared hosting, an attack directed against one site can affect other sites on the same server.&lt;/p&gt;
@@ -26,7 +26,7 @@
 
 &lt;p&gt;TCP connections is established by so-called &amp;ldquo;three-way handshake&amp;rdquo;. When TCP server starts, it passively waits for a connection by executing &lt;code&gt;listen()&lt;/code&gt; and &lt;code&gt;accept()&lt;/code&gt; system calls. The client on the other side sends a &lt;code&gt;SYN&lt;/code&gt; packet with an arbitrary sequence number, starting connection parameter negotiation. The server saves client&amp;rsquo;s parameters and sequence number and responds with a &lt;code&gt;SYN+ACK&lt;/code&gt; packet with its own preferred parameters, sequence number and client&amp;rsquo;s sequence number incremented by one. The client sends &lt;code&gt;ACK&lt;/code&gt; packet back and connection is now established.&lt;/p&gt;
 
-&lt;p&gt;&lt;img src=&#34;https://polachok.github.io/img/3-way-handshake.png&#34; alt=&#34;3 way handshake&#34; /&gt;&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;https://ltd-beget.github.io/img/3-way-handshake.png&#34; alt=&#34;3 way handshake&#34; /&gt;&lt;/p&gt;
 
 &lt;p&gt;During SYN flood attack the server is flooded with millions of SYN packets per second. In older releases kernel created a new socket for each received SYN packet. It was a huge waste of resources. More recent kernels employ &amp;ldquo;mini-sockets&amp;rdquo; technique to reduce the impact of SYN attacks, this work was done by an awesome Google engineer Eric Dumazet and is available in mainline kernels since 4.5.&lt;/p&gt;
 
@@ -53,7 +53,7 @@
 
 &lt;p&gt;SYNPROXY iptables target was added in Linux 3.12. It is similar to syn cookies, but has some additional advantages and disadvantages. SYNPROXY target processes packets before they hit Linux TCP stack and can be used for proxying valid packets to another server. Upon receiving SYN packet, SYNPROXY sends a cookie in response, and if it finds the response valid, it generates new SYN packet for the proxied host and rewrites sequence numbers in both directions.&lt;/p&gt;
 
-&lt;p&gt;&lt;img src=&#34;https://polachok.github.io/img/synproxy.png&#34; alt=&#34;synproxy&#34; /&gt;&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;https://ltd-beget.github.io/img/synproxy.png&#34; alt=&#34;synproxy&#34; /&gt;&lt;/p&gt;
 
 &lt;p&gt;In fact, this is how most of commercial SYN flood attack protection solutions operate.&lt;/p&gt;
 
@@ -99,7 +99,7 @@
 &lt;li&gt;&lt;strong&gt;tcpsecrets kernel module&lt;/strong&gt; is a kernel module which exposes TCP secret key and the timestamp as a file in /proc filesystem to be read by syncookied server. It also installs an Ftrace handler to fool the kernel into thinking that SYN cookie was sent.&lt;/li&gt;
 &lt;/ul&gt;
 
-&lt;p&gt;&lt;img src=&#34;https://polachok.github.io/img/syncookied.png&#34; alt=&#34;syncookied&#34; /&gt;&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;https://ltd-beget.github.io/img/syncookied.png&#34; alt=&#34;syncookied&#34; /&gt;&lt;/p&gt;
 
 &lt;p&gt;When not under attack, the traffic between the router and the server flows directly.
 In case of an attack the ARP entry for the protected IP is overriden on the switch with the MAC address of the firewall, directing the traffic flow to it.&lt;/p&gt;
