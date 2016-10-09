@@ -15,17 +15,17 @@
   </title>
 
   
-  <link rel="stylesheet" href="http://polachok.github.io/css/poole.css">
-  <link rel="stylesheet" href="http://polachok.github.io/css/syntax.css">
-  <link rel="stylesheet" href="http://polachok.github.io/css/lanyon.css">
+  <link rel="stylesheet" href="https://polachok.github.io/css/poole.css">
+  <link rel="stylesheet" href="https://polachok.github.io/css/syntax.css">
+  <link rel="stylesheet" href="https://polachok.github.io/css/lanyon.css">
   <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=PT+Serif:400,400italic,700|PT+Sans:400">
 
   
-  <link rel="apple-touch-icon-precomposed" sizes="144x144" href="http://polachok.github.io/assets/apple-touch-icon-144-precomposed.png">
-  <link rel="shortcut icon" href="http://polachok.github.io/assets/favicon.ico">
+  <link rel="apple-touch-icon-precomposed" sizes="144x144" href="https://polachok.github.io/assets/apple-touch-icon-144-precomposed.png">
+  <link rel="shortcut icon" href="https://polachok.github.io/assets/favicon.ico">
 
   
-  <link rel="alternate" type="application/rss+xml" title="RSS" href="http://polachok.github.io/atom.xml">
+  <link rel="alternate" type="application/rss+xml" title="RSS" href="https://polachok.github.io/atom.xml">
 </head>
 
 
@@ -41,8 +41,8 @@
   </div>
 
   <nav class="sidebar-nav">
-    <a class="sidebar-nav-item " href="http://polachok.github.io/">Home</a>
-    <a class="sidebar-nav-item " href="http://polachok.github.io/post">Posts</a>
+    <a class="sidebar-nav-item " href="https://polachok.github.io/">Home</a>
+    <a class="sidebar-nav-item " href="https://polachok.github.io/post">Posts</a>
 
     
     
@@ -65,7 +65,7 @@
       <div class="masthead">
         <div class="container">
           <h3 class="masthead-title">
-            <a href="http://polachok.github.io/" title="Home">pl/hk</a>
+            <a href="https://polachok.github.io/" title="Home">pl/hk</a>
             <small>dev blog</small>
           </h3>
         </div>
@@ -87,7 +87,7 @@
 
 <p>TCP connections is established by so-called &ldquo;three-way handshake&rdquo;. When TCP server starts it passively waits for a connection by executing <code>listen()</code> and <code>accept()</code> system calls. The client on the other side sends a <code>SYN</code> packet with an arbitrary sequence number, starting connection parameter negotiation. The server saves client&rsquo;s parameters and sequence number and responds with a <code>SYN+ACK</code> packet with its own preferred parameters, sequence number and client&rsquo;s sequence number incremented by one. The client sends <code>ACK</code> packet back and connection is now established.</p>
 
-<p><img src="http://polachok.github.io/img/3-way-handshake.png" alt="alt text" /></p>
+<p><img src="https://polachok.github.io/img/3-way-handshake.png" alt="alt text" /></p>
 
 <p>During SYN flood attack the server is flooded with millions of SYN packets per second. In older releases kernel created a new socket for each received SYN packet. It was a huge waste of resources. More recent kernels employ &ldquo;mini-sockets&rdquo; technique to reduce the impact of SYN attacks, this work was done by an awesome Google engineer Eric Dumazet and is available in mainline kernels since 4.5.</p>
 

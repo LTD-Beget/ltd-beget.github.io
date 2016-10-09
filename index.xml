@@ -2,7 +2,7 @@
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
     <title> </title>
-    <link>http://polachok.github.io/index.xml</link>
+    <link>https://polachok.github.io/index.xml</link>
     <language>en-us</language>
     <author>Alexander Polakov</author>
     <rights>(C) 2016</rights>
@@ -12,10 +12,10 @@
       
         <item>
           <title>SYN flood mitigation with syncookied</title>
-          <link>http://polachok.github.io/2016/10/09/syn-flood-mitigation-with-syncookied/</link>
+          <link>https://polachok.github.io/2016/10/09/syn-flood-mitigation-with-syncookied/</link>
           <pubDate>Sun, 09 Oct 2016 00:00:00 UTC</pubDate>
           <author>Alexander Polakov</author>
-          <guid>http://polachok.github.io/2016/10/09/syn-flood-mitigation-with-syncookied/</guid>
+          <guid>https://polachok.github.io/2016/10/09/syn-flood-mitigation-with-syncookied/</guid>
           <description>
 
 &lt;p&gt;Here at Beget, we operate hundreds of servers hosting thousands of websites for our customers. Like any large hosting provider we have to deal with DDOS attacks on our network. Due to the nature of shared hosting, an attack directed against one site can affect other sites on the same server.&lt;/p&gt;
@@ -26,7 +26,7 @@
 
 &lt;p&gt;TCP connections is established by so-called &amp;ldquo;three-way handshake&amp;rdquo;. When TCP server starts it passively waits for a connection by executing &lt;code&gt;listen()&lt;/code&gt; and &lt;code&gt;accept()&lt;/code&gt; system calls. The client on the other side sends a &lt;code&gt;SYN&lt;/code&gt; packet with an arbitrary sequence number, starting connection parameter negotiation. The server saves client&amp;rsquo;s parameters and sequence number and responds with a &lt;code&gt;SYN+ACK&lt;/code&gt; packet with its own preferred parameters, sequence number and client&amp;rsquo;s sequence number incremented by one. The client sends &lt;code&gt;ACK&lt;/code&gt; packet back and connection is now established.&lt;/p&gt;
 
-&lt;p&gt;&lt;img src=&#34;http://polachok.github.io/img/3-way-handshake.png&#34; alt=&#34;alt text&#34; /&gt;&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;https://polachok.github.io/img/3-way-handshake.png&#34; alt=&#34;alt text&#34; /&gt;&lt;/p&gt;
 
 &lt;p&gt;During SYN flood attack the server is flooded with millions of SYN packets per second. In older releases kernel created a new socket for each received SYN packet. It was a huge waste of resources. More recent kernels employ &amp;ldquo;mini-sockets&amp;rdquo; technique to reduce the impact of SYN attacks, this work was done by an awesome Google engineer Eric Dumazet and is available in mainline kernels since 4.5.&lt;/p&gt;
 
