@@ -18,7 +18,7 @@
           <guid>https://polachok.github.io/2016/10/09/syn-flood-mitigation-with-syncookied/</guid>
           <description>
 
-&lt;p&gt;Here at Beget, we operate hundreds of servers hosting thousands of websites for our customers. Like any large hosting provider we have to deal with DDOS attacks on our network. Due to the nature of shared hosting, an attack directed against one site can affect other sites on the same server.&lt;/p&gt;
+&lt;p&gt;Here at &lt;a href=&#34;https://beget.com&#34;&gt;Beget&lt;/a&gt;, we operate hundreds of servers hosting thousands of websites for our customers. Like any large hosting provider we have to deal with DDOS attacks on our network. Due to the nature of shared hosting, an attack directed against one site can affect other sites on the same server.&lt;/p&gt;
 
 &lt;p&gt;There&amp;rsquo;re many different types of attacks. One of the most dangerous is the SYN flood attack.&lt;/p&gt;
 
@@ -89,27 +89,29 @@
 &lt;p&gt;Syncookied system is a further development of SYN cookies, in a distributed fashion. It consists of 3 parts:&lt;/p&gt;
 
 &lt;ul&gt;
-&lt;li&gt;&lt;strong&gt;syncookied firewall&lt;/strong&gt; is a binary running on the firewall machine. Its task is to filter packets according to the rules in the configuration file. syncookied firewall communicates with syncookied server over local network and retrieves secret keys.&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;syncookied firewall&lt;/strong&gt; is a binary running on the firewall machine. Its task is to filter packets according to the rules in the configuration file. Syncookied firewall communicates with the syncookied server over local network and retrieves the secret keys.&lt;/li&gt;
 &lt;li&gt;&lt;strong&gt;syncookied server&lt;/strong&gt; is a binary running on the protected machine. Its task is to transfer the secret key, used for SYN cookie generation, to the firewall.&lt;/li&gt;
-&lt;li&gt;&lt;strong&gt;tcpsecrets kernel module&lt;/strong&gt; is a kernel module which exposes tcp secret key and timestamp as a file in /proc filesystem to be read by syncookied server. It also installs an Ftrace handler to fool the kernel into thinking that SYN cookie was sent.&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;tcpsecrets kernel module&lt;/strong&gt; is a kernel module which exposes tcp secret key and the timestamp as a file in /proc filesystem to be read by syncookied server. It also installs an Ftrace handler to fool the kernel into thinking that SYN cookie was sent.&lt;/li&gt;
 &lt;/ul&gt;
 
 &lt;p&gt;&lt;img src=&#34;https://polachok.github.io/img/syncookied.png&#34; alt=&#34;syncookied&#34; /&gt;&lt;/p&gt;
 
-&lt;p&gt;When not under attack, traffic between the router and the server flows directly.
+&lt;p&gt;When not under attack, the traffic between the router and the server flows directly.
 In case of an attack the ARP entry for the protected IP is overriden on the switch with the MAC address of the firewall, directing the traffic flow to it.&lt;/p&gt;
 
-&lt;p&gt;Syncookied firewall holds an in memory table matching protected IP addresses with secret keys and mac addresses, which is updated at 10 second interval. Upon receiving a SYN packet it consults the table, finds appopriate key and timestamp, and generates a cookie using the same alghorithm Linux kernel uses. ACK packets are then validated against the same key, and if found legit are forwarded to protected server&amp;rsquo;s MAC. Protected server accepts the packet because it was generated with its key.&lt;/p&gt;
+&lt;p&gt;Syncookied firewall holds an in-memory table matching protected IP addresses with the secret keys and mac addresses, which is updated at 10 second interval. Upon receiving a SYN packet it consults the table, finds the appopriate key and timestamp, and generates a cookie, using the same alghorithm Linux kernel uses. ACK packets are then validated against the same key, and if found legit, are forwarded to protected server&amp;rsquo;s MAC. Protected server accepts the packet, because it was generated with its key.&lt;/p&gt;
 
-&lt;p&gt;In our tests we found that this system can handle 12Mpps SYN flood attack with 12 cores of Xeon E5-2680v3. How is this possible?&lt;/p&gt;
+&lt;p&gt;In our tests we found that this system can handle up to 12Mpps SYN flood attack with 12 cores of Xeon E5-2680v3. How is this possible?&lt;/p&gt;
 
 &lt;h3 id=&#34;netmap-and-rust&#34;&gt;Netmap and Rust&lt;/h3&gt;
 
 &lt;p&gt;We evaluated multiple kernel bypass technologies for syncookied and decided to use netmap for its stability and simple API. Netmap provides userland access to network card packet buffers (called rings), excluding kernel from the data path.&lt;/p&gt;
 
-&lt;p&gt;Rust was choosen for its safety features and zero-cost abstractions. We haven&amp;rsquo;t seen a segmentation fault or a memory leak yet. Netmap bindings are provided by netmap-sys crate, while packet parsing is handled by awesome libpnet library.&lt;/p&gt;
+&lt;p&gt;Rust was choosen for its safety features and zero-cost abstractions. We haven&amp;rsquo;t seen a single segmentation fault or a memory leak yet. Netmap bindings are provided by &lt;a href=&#34;https://crates.io/crates/netmap_sys&#34;&gt;netmap-sys&lt;/a&gt; crate, while packet parsing is handled by awesome &lt;a href=&#34;https://crates.io/crates/pnet&#34;&gt;libpnet&lt;/a&gt; library. We use a thread for each RX and TX ring and use a queue to communicate between threads.&lt;/p&gt;
 
 &lt;p&gt;We&amp;rsquo;d like to thank open source community for their work and give back by putting our solution on Github. It&amp;rsquo;s still at 0.2.x version, but we believe in &amp;ldquo;release early, release often&amp;rdquo; philosophy and hope that it will find its users and we will find new contributors.&lt;/p&gt;
+
+&lt;p&gt;&lt;a href=&#34;https://github.com/LTD-Beget/syncookied&#34;&gt;Syncookied on Github&lt;/a&gt;&lt;/p&gt;
 </description>
         </item>
       
