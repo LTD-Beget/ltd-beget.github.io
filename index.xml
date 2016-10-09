@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes" ?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title> </title>
+    <link>http://polachok.github.io/index.xml</link>
+    <language>en-us</language>
+    <author>Alexander Polakov</author>
+    <rights>(C) 2016</rights>
+    <updated>2016-10-09 00:00:00 &#43;0000 UTC</updated>
+
+    
+      
+        <item>
+          <title>SYN flood mitigation with syncookied</title>
+          <link>http://polachok.github.io/2016/10/09/syn-flood-mitigation-with-syncookied/</link>
+          <pubDate>Sun, 09 Oct 2016 00:00:00 UTC</pubDate>
+          <author>Alexander Polakov</author>
+          <guid>http://polachok.github.io/2016/10/09/syn-flood-mitigation-with-syncookied/</guid>
+          <description>
+
+&lt;p&gt;Here at Beget, we operate hundreds of servers hosting thousands of websites for our customers. Like any large hosting provider we have to deal with DDOS attacks on our network. Due to the nature of shared hosting, an attack directed against one site can affect other sites on the same server.&lt;/p&gt;
+
+&lt;p&gt;There&amp;rsquo;re many different types of attacks. One of the most dangerous is the SYN flood attack.&lt;/p&gt;
+
+&lt;h3 id=&#34;tcp-connection-establishment&#34;&gt;TCP connection establishment&lt;/h3&gt;
+
+&lt;p&gt;TCP connections is established by so-called &amp;ldquo;three-way handshake&amp;rdquo;. When TCP server starts it passively waits for a connection by executing &lt;code&gt;listen()&lt;/code&gt; and &lt;code&gt;accept()&lt;/code&gt; system calls. The client on the other side sends a &lt;code&gt;SYN&lt;/code&gt; packet with an arbitrary sequence number, starting connection parameter negotiation. The server saves client&amp;rsquo;s parameters and sequence number and responds with a &lt;code&gt;SYN+ACK&lt;/code&gt; packet with its own preferred parameters, sequence number and client&amp;rsquo;s sequence number incremented by one. The client sends &lt;code&gt;ACK&lt;/code&gt; packet back and connection is now established.&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&#34;http://polachok.github.io/img/3-way-handshake.png&#34; alt=&#34;alt text&#34; /&gt;&lt;/p&gt;
+
+&lt;p&gt;During SYN flood attack the server is flooded with millions of SYN packets per second. In older releases kernel created a new socket for each received SYN packet. It was a huge waste of resources. More recent kernels employ &amp;ldquo;mini-sockets&amp;rdquo; technique to reduce the impact of SYN attacks, this work was done by an awesome Google engineer Eric Dumazet and is available in mainline kernels since 4.5.&lt;/p&gt;
+
+&lt;p&gt;Mini-sockets or not, it&amp;rsquo;s clearly undesirable to store any state before the connection is fully established, and this is how we come to the idea of SYN cookies.&lt;/p&gt;
+
+&lt;h3 id=&#34;syn-cookies&#34;&gt;SYN cookies&lt;/h3&gt;
+
+&lt;p&gt;This technique was invented by Daniel J.Berstein in 1996. The crux of the idea is to encode incoming tcp connection parameters into the sequence number sent back to the client (in a &lt;code&gt;SYN+ACK&lt;/code&gt; packet). A conforming client will then increment this number and send it back to us, effectively freeing the server from the burden of saving state. Upon receiving a final &lt;code&gt;ACK&lt;/code&gt; from the client server validates that the cookie was indeed generated on the server.&lt;/p&gt;
+
+&lt;p&gt;The cookie is created by hashing source and destination IP addresses and ports and adding initial client&amp;rsquo;s sequence number to the result. A unique secret key is used to ensure that cookie is not forged.&lt;/p&gt;
+
+&lt;p&gt;As an additional features, Linux uses lowest bits of the TCP timestamp option to encode ECN, S-ACK and WSCALE options.&lt;/p&gt;
+
+&lt;p&gt;SYN cookie significantly improves system&amp;rsquo;s ability to process SYN packets. In our tests a system without any specific tuning was able to withstand 300K-350K packets per second (data is valid for a 1G network card with 4 interrupt lines).&lt;/p&gt;
+
+&lt;p&gt;[ Talk about disadvantages ]&lt;/p&gt;
+
+&lt;h3 id=&#34;synproxy&#34;&gt;SYNPROXY&lt;/h3&gt;
+
+&lt;p&gt;SYN proxy iptables target was added in Linux 3.12. It is similar to syn cookies technique, but has some additional advantages and disadvantages. &lt;code&gt;synproxy&lt;/code&gt; target processes packets before they hit Linux TCP stack and can be used for proxying valid packets to another server. Upon receiving SYN packet, SYNPROXY sends a cookie in response, and if it finds the response valid, it generates new SYN packet for the proxied host and rewrites sequence numbers in both directions.&lt;/p&gt;
+
+&lt;p&gt;In fact, this is how most of commercial SYN flood attack protection solutions work.&lt;/p&gt;
+
+&lt;p&gt;This method has some undeniable advantages:&lt;/p&gt;
+
+&lt;ul&gt;
+&lt;li&gt;there&amp;rsquo;s no need to use the heavy SHA1 algorithm&lt;/li&gt;
+&lt;li&gt;invalid packets don&amp;rsquo;t reach protected server&lt;/li&gt;
+&lt;li&gt;it&amp;rsquo;s possible to protect a server running any OS&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;There also are some disadvantages:&lt;/p&gt;
+
+&lt;ul&gt;
+&lt;li&gt;disadvantages of SYN cookie&lt;/li&gt;
+&lt;li&gt;termination of all established connections when activating protection&lt;/li&gt;
+&lt;li&gt;equipment has to be installed in the split, meaning that all traffic to the server and from it has to pass through SYNPROXY&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;We have been using iptables SYNPROXY for some time and found that this solution was suboptimal for our requirements. The power of DDOS attacks available for a dollar is increasing every day, and we&amp;rsquo;re about to hit the limit of what&amp;rsquo;s possible to do with SYNPROXY.&lt;/p&gt;
+
+&lt;p&gt;Then we turned to commercial vendors and quickly found out that their solutions are too costly ($100 000 for a piece of hardware).&lt;/p&gt;
+
+&lt;p&gt;That&amp;rsquo;s how we came to the idea of developing our own solution which will fit our usecase (managed servers).&lt;/p&gt;
+
+&lt;h3 id=&#34;our-solution&#34;&gt;Our solution&lt;/h3&gt;
+</description>
+        </item>
+      
+    
+
+  </channel>
+</rss>

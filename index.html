@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en-us">
+
+  <head>
+	<meta name="generator" content="Hugo 0.17" />
+  <link href="http://gmpg.org/xfn/11" rel="profile">
+  <meta http-equiv="content-type" content="text/html; charset=utf-8">
+
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+
+  <title>
+    
+      pl/hk &middot; dev blog
+    
+  </title>
+
+  
+  <link rel="stylesheet" href="http://polachok.github.io/css/poole.css">
+  <link rel="stylesheet" href="http://polachok.github.io/css/syntax.css">
+  <link rel="stylesheet" href="http://polachok.github.io/css/lanyon.css">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=PT+Serif:400,400italic,700|PT+Sans:400">
+
+  
+  <link rel="apple-touch-icon-precomposed" sizes="144x144" href="http://polachok.github.io/assets/apple-touch-icon-144-precomposed.png">
+  <link rel="shortcut icon" href="http://polachok.github.io/assets/favicon.ico">
+
+  
+  <link rel="alternate" type="application/rss+xml" title="RSS" href="http://polachok.github.io/atom.xml">
+</head>
+
+
+  <body>
+
+    
+<input type="checkbox" class="sidebar-checkbox" id="sidebar-checkbox">
+
+
+<div class="sidebar" id="sidebar">
+  <div class="sidebar-item">
+    <p>A reserved <a href="http://jekyllrb.com" target="_blank">Jekyll</a> theme that places the utmost gravity on content with a hidden drawer. Made by <a href="https://twitter.com/mdo" target="_blank">@mdo</a>.</p>
+  </div>
+
+  <nav class="sidebar-nav">
+    <a class="sidebar-nav-item  active " href="http://polachok.github.io/">Home</a>
+    <a class="sidebar-nav-item " href="http://polachok.github.io/post">Posts</a>
+
+    
+    
+      
+    
+
+    <a class="sidebar-nav-item" href="http://github.com/polachok/polachok.github.io/archive/master.zip">Download</a>
+    <a class="sidebar-nav-item" href="http://github.com/polachok/polachok.github.io">GitHub project</a>
+    <span class="sidebar-nav-item">Currently on master</span>
+  </nav>
+
+  <div class="sidebar-item">
+    <p>&copy; 2016. All rights reserved.</p>
+  </div>
+</div>
+
+
+    
+    <div class="wrap">
+      <div class="masthead">
+        <div class="container">
+          <h3 class="masthead-title">
+            <a href="http://polachok.github.io/" title="Home">pl/hk</a>
+            <small>dev blog</small>
+          </h3>
+        </div>
+      </div>
+
+      <div class="container content">
+
+
+
+
+
+<div class="posts">
+  
+    <div class="post">
+        <h1 class="post-title"><a href="http://polachok.github.io/2016/10/09/syn-flood-mitigation-with-syncookied/">SYN flood mitigation with syncookied</a></h1>
+        <span class="post-date">Oct 9 9106</span>
+        
+
+<p>Here at Beget, we operate hundreds of servers hosting thousands of websites for our customers. Like any large hosting provider we have to deal with DDOS attacks on our network. Due to the nature of shared hosting, an attack directed against one site can affect other sites on the same server.</p>
+
+<p>There&rsquo;re many different types of attacks. One of the most dangerous is the SYN flood attack.</p>
+
+<h3 id="tcp-connection-establishment">TCP connection establishment</h3>
+
+<p>TCP connections is established by so-called &ldquo;three-way handshake&rdquo;. When TCP server starts it passively waits for a connection by executing <code>listen()</code> and <code>accept()</code> system calls. The client on the other side sends a <code>SYN</code> packet with an arbitrary sequence number, starting connection parameter negotiation. The server saves client&rsquo;s parameters and sequence number and responds with a <code>SYN+ACK</code> packet with its own preferred parameters, sequence number and client&rsquo;s sequence number incremented by one. The client sends <code>ACK</code> packet back and connection is now established.</p>
+
+<p><img src="http://polachok.github.io/img/3-way-handshake.png" alt="alt text" /></p>
+
+<p>During SYN flood attack the server is flooded with millions of SYN packets per second. In older releases kernel created a new socket for each received SYN packet. It was a huge waste of resources. More recent kernels employ &ldquo;mini-sockets&rdquo; technique to reduce the impact of SYN attacks, this work was done by an awesome Google engineer Eric Dumazet and is available in mainline kernels since 4.5.</p>
+
+<p>Mini-sockets or not, it&rsquo;s clearly undesirable to store any state before the connection is fully established, and this is how we come to the idea of SYN cookies.</p>
+
+<h3 id="syn-cookies">SYN cookies</h3>
+
+<p>This technique was invented by Daniel J.Berstein in 1996. The crux of the idea is to encode incoming tcp connection parameters into the sequence number sent back to the client (in a <code>SYN+ACK</code> packet). A conforming client will then increment this number and send it back to us, effectively freeing the server from the burden of saving state. Upon receiving a final <code>ACK</code> from the client server validates that the cookie was indeed generated on the server.</p>
+
+<p>The cookie is created by hashing source and destination IP addresses and ports and adding initial client&rsquo;s sequence number to the result. A unique secret key is used to ensure that cookie is not forged.</p>
+
+<p>As an additional features, Linux uses lowest bits of the TCP timestamp option to encode ECN, S-ACK and WSCALE options.</p>
+
+<p>SYN cookie significantly improves system&rsquo;s ability to process SYN packets. In our tests a system without any specific tuning was able to withstand 300K-350K packets per second (data is valid for a 1G network card with 4 interrupt lines).</p>
+
+<p>[ Talk about disadvantages ]</p>
+
+<h3 id="synproxy">SYNPROXY</h3>
+
+<p>SYN proxy iptables target was added in Linux 3.12. It is similar to syn cookies technique, but has some additional advantages and disadvantages. <code>synproxy</code> target processes packets before they hit Linux TCP stack and can be used for proxying valid packets to another server. Upon receiving SYN packet, SYNPROXY sends a cookie in response, and if it finds the response valid, it generates new SYN packet for the proxied host and rewrites sequence numbers in both directions.</p>
+
+<p>In fact, this is how most of commercial SYN flood attack protection solutions work.</p>
+
+<p>This method has some undeniable advantages:</p>
+
+<ul>
+<li>there&rsquo;s no need to use the heavy SHA1 algorithm</li>
+<li>invalid packets don&rsquo;t reach protected server</li>
+<li>it&rsquo;s possible to protect a server running any OS</li>
+</ul>
+
+<p>There also are some disadvantages:</p>
+
+<ul>
+<li>disadvantages of SYN cookie</li>
+<li>termination of all established connections when activating protection</li>
+<li>equipment has to be installed in the split, meaning that all traffic to the server and from it has to pass through SYNPROXY</li>
+</ul>
+
+<p>We have been using iptables SYNPROXY for some time and found that this solution was suboptimal for our requirements. The power of DDOS attacks available for a dollar is increasing every day, and we&rsquo;re about to hit the limit of what&rsquo;s possible to do with SYNPROXY.</p>
+
+<p>Then we turned to commercial vendors and quickly found out that their solutions are too costly ($100 000 for a piece of hardware).</p>
+
+<p>That&rsquo;s how we came to the idea of developing our own solution which will fit our usecase (managed servers).</p>
+
+<h3 id="our-solution">Our solution</h3>
+
+    </div>
+  
+</div>
+
+<div class="pagination">
+  
+  <span class="pagination-item older">Older</span>
+  
+
+  
+  <span class="pagination-item newer">Newer</span>
+  
+</div>
+
+      </div>
+    </div>
+
+    <label for="sidebar-checkbox" class="sidebar-toggle"></label>
+
+  </body>
+</html>
+
