@@ -4,7 +4,7 @@
     "author": "Alexander Polakov"
 }
 
-Here at Beget, we operate hundreds of servers hosting thousands of websites for our customers. Like any large hosting provider we have to deal with DDOS attacks on our network. Due to the nature of shared hosting, an attack directed against one site can affect other sites on the same server.
+Here at [Beget](https://beget.com), we operate hundreds of servers hosting thousands of websites for our customers. Like any large hosting provider we have to deal with DDOS attacks on our network. Due to the nature of shared hosting, an attack directed against one site can affect other sites on the same server.
 
 There're many different types of attacks. One of the most dangerous is the SYN flood attack.
 
@@ -86,6 +86,8 @@ In our tests we found that this system can handle up to 12Mpps SYN flood attack 
 
 We evaluated multiple kernel bypass technologies for syncookied and decided to use netmap for its stability and simple API. Netmap provides userland access to network card packet buffers (called rings), excluding kernel from the data path.
 
-Rust was choosen for its safety features and zero-cost abstractions. We haven't seen a segmentation fault or a memory leak yet. Netmap bindings are provided by netmap-sys crate, while packet parsing is handled by awesome libpnet library.
+Rust was choosen for its safety features and zero-cost abstractions. We haven't seen a single segmentation fault or a memory leak yet. Netmap bindings are provided by [netmap-sys](https://crates.io/crates/netmap_sys) crate, while packet parsing is handled by awesome [libpnet](https://crates.io/crates/pnet) library. We use a thread for each RX and TX ring and use a queue to communicate between threads.
 
 We'd like to thank open source community for their work and give back by putting our solution on Github. It's still at 0.2.x version, but we believe in "release early, release often" philosophy and hope that it will find its users and we will find new contributors.
+
+[Syncookied on Github](https://github.com/LTD-Beget/syncookied)
