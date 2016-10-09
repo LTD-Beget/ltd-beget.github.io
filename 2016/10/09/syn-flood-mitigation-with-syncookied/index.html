@@ -145,6 +145,8 @@
 <li>We want to use commodity hardware</li>
 </ul>
 
+<h3 id="our-solution">Our solution</h3>
+
 <p>Syncookied system is a further development of SYN cookies, in a distributed fashion. It consists of 3 parts:</p>
 
 <ul>
@@ -154,6 +156,11 @@
 </ul>
 
 <p><img src="https://polachok.github.io/img/syncookied.png" alt="syncookied" /></p>
+
+<p>When not under attack, traffic between the router and the server flows directly.
+In case of an attack the ARP entry for the protected IP is overriden on the switch with the MAC address of the firewall, directing the traffic flow to it.</p>
+
+<p>Syncookied firewall holds an in memory table matching protected IP addresses with secret keys and mac addresses, which is updated at 10 second interval. Upon receiving a SYN packet it consults the table, finds appopriate key and timestamp, and generates a cookie using the same alghorithm Linux kernel uses. ACK packets are then validated against the same key, and if found legit are forwarded to protected server. Protected server accepts the packet because it was generated with its key.</p>
 
 </div>
 
