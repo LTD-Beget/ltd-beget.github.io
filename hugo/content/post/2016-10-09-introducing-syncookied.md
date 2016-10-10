@@ -14,9 +14,9 @@ TCP connections is established by so-called "three-way handshake". When TCP serv
 
 ![3 way handshake](/img/3-way-handshake.png)
 
-During SYN flood attack the server is flooded with millions of SYN packets per second. In older releases kernel created a new socket for each received SYN packet. It was a huge waste of resources. More recent kernels employ "mini-sockets" technique to reduce the impact of SYN attacks, this work was done by an awesome Google engineer Eric Dumazet and is available in mainline kernels since 4.5.
+During SYN flood attack the server is flooded with millions of SYN packets per second. It has to keep track of each of them to know if subsequent ACK packet comes from the same connection. At this rate, pending connection queue (specified as a second argument to the `listen()` syscall) quickly becomes exhausted and server becomes unable to process new connections from legitimate clients.
 
-Using mini-sockets or not, it's clearly undesirable to store any state before the connection is fully established, and this is how we come to the idea of SYN cookies.
+It's clearly undesirable to store any state before the connection is fully established, and this is how we come to the idea of SYN cookies.
 
 
 ### SYN cookies
@@ -27,7 +27,7 @@ The cookie is created by hashing source and destination IP addresses and ports a
 
 As an additional features, Linux uses lowest bits of the TCP timestamp option to encode ECN, S-ACK and WSCALE options.
 
-SYN cookies significantly improves system's ability to process SYN packets. In our tests a system without any specific tuning was able to withstand 300K-350K packets per second (data is valid for a 1G network card with 4 interrupt lines). 
+SYN cookies significantly improve system's ability to process SYN packets. In our tests a system without any specific tuning was able to withstand 300K-350K packets per second. More recent kernels remove the association of SYN cookies to a listener to reduce the impact of SYN attacks, this work was done by an awesome Google engineer Eric Dumazet and is available in mainline kernels since 4.5.
 
 There're some disadvantages to using SYN cookies:
 
