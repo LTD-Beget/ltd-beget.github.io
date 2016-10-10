@@ -27,7 +27,7 @@ The cookie is created by hashing source and destination IP addresses and ports a
 
 As an additional features, Linux uses lowest bits of the TCP timestamp option to encode ECN, S-ACK and WSCALE options.
 
-SYN cookies significantly improve system's ability to process SYN packets. In our tests a system without any specific tuning was able to withstand 300K-350K packets per second. More recent kernels remove the association of SYN cookies to a listener to reduce the impact of SYN attacks, this work was done by an awesome Google engineer Eric Dumazet and is available in mainline kernels since 4.5.
+SYN cookies significantly improve system's ability to process SYN packets. In our tests a system without any specific tuning was able to withstand 300K-350K packets per second. More recent kernels remove the association of SYN cookies to a listener to futher reduce the impact of SYN attacks, this work was done by an awesome Google engineer Eric Dumazet and is available in mainline kernels since 4.5.
 
 There're some disadvantages to using SYN cookies:
 
