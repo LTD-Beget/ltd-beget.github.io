@@ -5,7 +5,7 @@
 
     "builddrafts": false,
 
-    "baseurl": "https://ltd-beget.github.io/",
+    "baseurl": "http://blog.beget.com/",
     "canonifyurls": true,
     "permalinks": {
         "post": ":year/:month/:day/:title/",
@@ -17,7 +17,7 @@
     "params": {
         "Title": "Beget engineering blog",
         "Tagline": "",
-        "Author": "Alexander Polakov",
+        "Author": "Beget engineering team",
         "DateForm": "Jan 2 2006",
         "Github": {
             "Url": "http://github.com/LTD-Beget/ltd-beget.github.io",

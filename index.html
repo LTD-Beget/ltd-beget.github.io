@@ -16,17 +16,17 @@
   </title>
 
   
-  <link rel="stylesheet" href="https://ltd-beget.github.io/css/poole.css">
-  <link rel="stylesheet" href="https://ltd-beget.github.io/css/syntax.css">
-  <link rel="stylesheet" href="https://ltd-beget.github.io/css/lanyon.css">
+  <link rel="stylesheet" href="http://blog.beget.com/css/poole.css">
+  <link rel="stylesheet" href="http://blog.beget.com/css/syntax.css">
+  <link rel="stylesheet" href="http://blog.beget.com/css/lanyon.css">
   <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=PT+Serif:400,400italic,700|PT+Sans:400">
 
   
-  <link rel="apple-touch-icon-precomposed" sizes="144x144" href="https://ltd-beget.github.io/assets/apple-touch-icon-144-precomposed.png">
-  <link rel="shortcut icon" href="https://ltd-beget.github.io/assets/favicon.ico">
+  <link rel="apple-touch-icon-precomposed" sizes="144x144" href="http://blog.beget.com/assets/apple-touch-icon-144-precomposed.png">
+  <link rel="shortcut icon" href="http://blog.beget.com/assets/favicon.ico">
 
   
-  <link rel="alternate" type="application/rss+xml" title="RSS" href="https://ltd-beget.github.io/atom.xml">
+  <link rel="alternate" type="application/rss+xml" title="RSS" href="http://blog.beget.com/atom.xml">
 </head>
 
 
@@ -40,7 +40,7 @@
       <div class="masthead">
         <div class="container">
           <h3 class="masthead-title">
-            <a href="https://ltd-beget.github.io/" title="Home">Beget engineering blog</a>
+            <a href="http://blog.beget.com/" title="Home">Beget engineering blog</a>
             <small></small>
           </h3>
         </div>
@@ -55,7 +55,7 @@
 <div class="posts">
   
     <div class="post">
-        <h1 class="post-title"><a href="https://ltd-beget.github.io/2016/10/09/syn-flood-mitigation-with-syncookied/">SYN flood mitigation with syncookied</a></h1>
+        <h1 class="post-title"><a href="http://blog.beget.com/2016/10/09/syn-flood-mitigation-with-syncookied/">SYN flood mitigation with syncookied</a></h1>
         <span class="post-date">Oct 9 2016</span>
         
 
@@ -67,7 +67,7 @@
 
 <p>TCP connections is established by so-called &ldquo;three-way handshake&rdquo;. When TCP server starts, it passively waits for a connection by executing <code>listen()</code> and <code>accept()</code> system calls. The client on the other side sends a <code>SYN</code> packet with an arbitrary sequence number, starting connection parameter negotiation. The server saves client&rsquo;s parameters and sequence number and responds with a <code>SYN+ACK</code> packet with its own preferred parameters, sequence number and client&rsquo;s sequence number incremented by one. The client sends <code>ACK</code> packet back and connection is now established.</p>
 
-<p><img src="https://ltd-beget.github.io/img/3-way-handshake.png" alt="3 way handshake" /></p>
+<p><img src="http://blog.beget.com/img/3-way-handshake.png" alt="3 way handshake" /></p>
 
 <p>During SYN flood attack the server is flooded with millions of SYN packets per second. It has to keep track of each of them to know if subsequent ACK packet comes from the same connection. At this rate, pending connection queue (specified as a second argument to the <code>listen()</code> syscall) quickly becomes exhausted and server becomes unable to process new connections from legitimate clients.</p>
 
@@ -94,7 +94,7 @@
 
 <p>SYNPROXY iptables target was added in Linux 3.12. It is similar to syn cookies, but has some additional advantages and disadvantages. SYNPROXY target processes packets before they hit Linux TCP stack and can be used for proxying valid packets to another server. Upon receiving SYN packet, SYNPROXY sends a cookie in response, and if it finds the response valid, it generates new SYN packet for the proxied host and rewrites sequence numbers in both directions.</p>
 
-<p><img src="https://ltd-beget.github.io/img/synproxy.png" alt="synproxy" /></p>
+<p><img src="http://blog.beget.com/img/synproxy.png" alt="synproxy" /></p>
 
 <p>In fact, this is how most of commercial SYN flood attack protection solutions operate.</p>
 
@@ -140,7 +140,7 @@
 <li><strong>tcpsecrets kernel module</strong> is a kernel module which exposes TCP secret key and the timestamp as a file in /proc filesystem to be read by syncookied server. It also installs an Ftrace handler to fool the kernel into thinking that SYN cookie was sent.</li>
 </ul>
 
-<p><img src="https://ltd-beget.github.io/img/syncookied.png" alt="syncookied" /></p>
+<p><img src="http://blog.beget.com/img/syncookied.png" alt="syncookied" /></p>
 
 <p>When not under attack, the traffic between the router and the server flows directly.
 In case of an attack the ARP entry for the protected IP is overriden on the switch with the MAC address of the firewall, directing the traffic flow to it.</p>
